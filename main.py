@@ -31,6 +31,23 @@ app.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
 app.include_router(users_router, prefix="/users", tags=["users"])
 
 
+# @app.on_event("startup")
+# def startup_event():
+#     Base.metadata.create_all(bind=engine)
 @app.on_event("startup")
-def startup_event():
+def startup():
     Base.metadata.create_all(bind=engine)
+    # Auto seed if no users exist
+    from database import SessionLocal
+    from models import User
+    import auth as auth_module
+    db = SessionLocal()
+    if db.query(User).count() == 0:
+        users = [
+            User(name="Admin", email="admin@example.com", hashed_password=auth_module.get_password_hash("adminpass"), role="admin"),
+            User(name="Analyst", email="analyst@example.com", hashed_password=auth_module.get_password_hash("analystpass"), role="analyst"),
+            User(name="Viewer", email="viewer@example.com", hashed_password=auth_module.get_password_hash("viewerpass"), role="viewer"),
+        ]
+        db.add_all(users)
+        db.commit()
+    db.close()
